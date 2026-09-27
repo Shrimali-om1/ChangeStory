@@ -8,6 +8,8 @@ GET /scenarios → POST /scenarios/{id}/analyze flow.
 
 from __future__ import annotations
 
+import webbrowser
+
 import click
 
 from changestory.api_client import APIError, get_scenarios, post_analyze_scenario
@@ -48,6 +50,13 @@ SCENARIO_DESCRIPTIONS = {
     metavar="[SCENARIO]",
 )
 @click.option(
+    "--open/--no-open",
+    "open_browser",
+    default=True,
+    show_default=True,
+    help="Automatically open the dashboard in the browser after analysis.",
+)
+@click.option(
     "--list",
     "list_only",
     is_flag=True,
@@ -77,6 +86,7 @@ SCENARIO_DESCRIPTIONS = {
 )
 def demo_cmd(
     scenario: str | None,
+    open_browser: bool,
     list_only: bool,
     run_all: bool,
     api_url_override: str | None,
@@ -181,7 +191,11 @@ def demo_cmd(
                 f"Backend error ({exc.status}): {exc.detail}"
             ) from exc
 
-        _print_report_summary(report, api_url=api_url, frontend_url=frontend_url)
+        dashboard_url = _print_report_summary(report, api_url=api_url, frontend_url=frontend_url)
+
+        if open_browser and dashboard_url:
+            click.echo(f"  Opening dashboard: {dashboard_url}")
+            webbrowser.open(dashboard_url)
 
     if len(to_run) > 1:
         click.echo(f"[ok] Completed {len(to_run)} demo scenarios.")
