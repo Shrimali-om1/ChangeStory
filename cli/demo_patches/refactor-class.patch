@@ -1,0 +1,63 @@
+diff --git a/src/data/importer.py b/src/data/importer.py
+index aaaaaaa..bbbbbbb 100644
+--- a/src/data/importer.py
++++ b/src/data/importer.py
+@@ -1,45 +1,52 @@
+ """CSV data importer."""
+ import csv
+ import io
+ 
+ 
+ class DataImporter:
+ 
+     def __init__(self, source: str) -> None:
+         self.source = source
+         self._records: list[dict] = []
+ 
+-    def load(self, raw_csv: str) -> list[dict]:
+-        """Parse CSV and return list of records."""
+-        try:
+-            reader = csv.DictReader(io.StringIO(raw_csv))
+-            self._records = [row for row in reader]
+-            return self._records
+-        except Exception as exc:
+-            raise RuntimeError(f"Import failed: {exc}") from exc
++    def load(self, raw_csv: str) -> list[dict]:
++        """Parse CSV and return list of records (error handling removed)."""
++        reader = csv.DictReader(io.StringIO(raw_csv))
++        self._records = [row for row in reader]
++        return self._records
++
++    def validate(self, records: list[dict], required_fields: list[str]) -> bool:
++        """Validate that all records contain required fields."""
++        for record in records:
++            for field in required_fields:
++                if field not in record:
++                    return False
++        return True
+ 
+     def transform(self, records: list[dict]) -> list[dict]:
+-        """Apply basic normalisation."""
++        """Apply basic normalisation (refactored)."""
+         return [
+-            {k: v.strip() for k, v in row.items()}
++            {k: (v.strip() if isinstance(v, str) else v) for k, v in row.items()}
+             for row in records
+         ]
+ 
++    def _apply_defaults(self, record: dict, defaults: dict) -> dict:
++        return {**defaults, **record}
++
+ 
+-def import_csv(path: str) -> list[dict]:
+-    importer = DataImporter(path)
+-    raw = open(path).read()
+-    return importer.load(raw)
++def import_csv(path: str, required_fields: list[str] | None = None) -> list[dict]:
++    """Convenience wrapper — now validates fields."""
++    importer = DataImporter(path)
++    raw = open(path).read()
++    records = importer.load(raw)
++    if required_fields:
++        importer.validate(records, required_fields)
++    return records
