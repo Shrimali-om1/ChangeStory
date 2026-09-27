@@ -40,7 +40,7 @@ app.include_router(scenarios_router, prefix=_PREFIX, tags=["Scenarios & Verify"]
 
 
 @app.get("/", tags=["Health"])
-async def root() -> dict:
+async def root() -> dict[str, str]:
     return {
         "service": "ChangeStory API",
         "version": "0.1.0",
@@ -50,5 +50,5 @@ async def root() -> dict:
 
 
 @app.get("/health", tags=["Health"])
-async def health() -> dict:
+async def health() -> dict[str, str]:
     return {"status": "ok"}

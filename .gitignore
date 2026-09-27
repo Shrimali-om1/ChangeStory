@@ -48,3 +48,6 @@ backend/data/sessions/
 
 data/sessions/
 
+
+# Bob AI artifacts
+.bob/
