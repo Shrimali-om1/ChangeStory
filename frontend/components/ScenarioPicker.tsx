@@ -9,7 +9,7 @@ interface Props {
   loading: boolean;
 }
 
-export default function ScenarioPicker({ scenarios, onSelect, loading }: Props) {
+export default function ScenarioPicker({ scenarios = [], onSelect, loading }: Props) {
   const [selected, setSelected] = useState<string | null>(null);
 
   return (
@@ -18,7 +18,7 @@ export default function ScenarioPicker({ scenarios, onSelect, loading }: Props) 
         Choose a bundled demo to explore without providing your own diff:
       </p>
       <div className="grid gap-3 sm:grid-cols-3">
-        {scenarios.map((s) => (
+        {(scenarios ?? []).map((s) => (
           <button
             key={s.id}
             disabled={loading}

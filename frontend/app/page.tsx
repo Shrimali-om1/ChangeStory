@@ -19,20 +19,22 @@ export default function HomePage() {
 
   // If URL has ?session=<id>, load that report automatically (used by CLI redirect)
   useEffect(() => {
+    if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get("session");
-    if (sessionId) {
-      setPhase("loading");
-      getReport(sessionId)
-        .then((r) => {
-          setReport(r);
-          setPhase("report");
-        })
-        .catch(() => {
-          setErrorMsg(`Could not load report for session: ${sessionId}`);
-          setPhase("error");
-        });
-    }
+    if (!sessionId) return;
+    setPhase("loading");
+    getReport(sessionId)
+      .then((r) => {
+        setReport(r);
+        setPhase("report");
+        // Clean up URL so refresh doesn't reload the same session
+        window.history.replaceState({}, "", window.location.pathname);
+      })
+      .catch(() => {
+        setErrorMsg(`Could not load report for session: ${sessionId}`);
+        setPhase("error");
+      });
   }, []);
 
   // Load scenarios on mount
