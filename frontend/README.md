@@ -1,77 +1,102 @@
-# ChangeStory — Frontend
+# ChangeStory — Frontend Dashboard
 
-**Stack:** Next.js 14+ · React · TypeScript
+**Stack:** Next.js 16 · React 19 · TypeScript · Tailwind CSS v4
 
-## Setup
+---
+
+## Quick start
 
 ```bash
-npm create next-app@latest . --typescript --tailwind --eslint --app
+# 1. Start the backend first (port 8000)
+cd ../backend
+python -m venv .venv && .venv\Scripts\activate   # Windows
+pip install -e ".[dev]"
+uvicorn app.main:app --reload --port 8000
+
+# 2. Start the frontend (new terminal)
+cd ../frontend
 npm install
 npm run dev
 ```
 
-## API integration
+Open **http://localhost:3000** in your browser.
 
-The backend runs at `http://localhost:8000`.  See `../docs/API_CONTRACT.md` for all
-endpoints, request shapes, and response types.
+The Next.js dev server proxies all `/api/*` requests to `http://localhost:8000/api/*`,
+so no CORS configuration is needed.
 
-## Key pages to build
+---
 
-| Route | Purpose |
-|-------|---------|
-| `/` | Landing / upload diff or choose a scenario |
-| `/report/[session_id]` | Full report view |
-| `/report/[session_id]/export` | Export controls (JSON / MD) |
-| `/scenarios` | Browse bundled demo scenarios |
+## Available npm scripts
 
-## Suggested component structure
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Start dev server with hot reload |
+| `npm run build` | Production build |
+| `npm run start` | Serve the production build |
+| `npm run lint` | ESLint check |
+
+---
+
+## Dashboard features
+
+| Feature | Details |
+|---------|---------|
+| **Diff input** | Paste any unified diff; choose Quick / Standard / Deep mode |
+| **Demo scenarios** | Three bundled scenarios loaded from `GET /api/v1/scenarios` |
+| **Analyze** | Submits to `POST /api/v1/analyze` or `POST /api/v1/scenarios/{id}/analyze` |
+| **Reset** | Clears state back to the input form |
+| **Summary cards** | Changed files, symbols, affected symbols, caller links, risks, test recs |
+| **Changed files table** | Path, change type, +/− line counts, changed symbols |
+| **Changed symbols** | Qualified name, kind, file/line |
+| **Affected symbols** | Potential impact symbols, amber-highlighted |
+| **Caller relationships** | Caller → callee table with confidence labels |
+| **Risks** | Sorted by severity; collapsible evidence |
+| **Test recommendations** | Sorted by priority; suggested test IDs |
+| **Verification** | Shown only when `report.is_demo === true`; calls `POST /api/v1/verify/{session_id}` |
+| **Export** | JSON (`/export.json`) and Markdown (`/export.md`) — browser-initiated downloads |
+| **Limitations** | Displayed from `report.limitations[]` |
+| **Error states** | Friendly error panel with retry link |
+| **Loading states** | Spinner overlay during analysis; inline spinner for scenarios/verify |
+
+---
+
+## API assumptions
+
+All assumptions are derived from `docs/API_CONTRACT.md` — no routes or fields were invented.
+
+| Assumption | Source |
+|-----------|--------|
+| Backend runs at `http://localhost:8000` | `README.md` |
+| `POST /api/v1/scenarios/{id}/analyze` triggers analysis for a demo scenario | `backend/app/routes/scenarios.py` |
+| `report.is_demo` is `true` only for bundled-scenario reports | `backend/app/models.py` |
+| `POST /api/v1/verify/{session_id}` returns `{ session_id, verification }` | `docs/API_CONTRACT.md §7` |
+| Export routes return file downloads with `Content-Disposition: attachment` | `docs/API_CONTRACT.md §4–5` |
+| Diff validation: must contain `diff `, `---`, `+++`, or `@@` | `backend/app/routes/analyze.py` |
+| All errors follow `{ "detail": "..." }` shape | `docs/API_CONTRACT.md §8` |
+
+---
+
+## Project layout
 
 ```
 frontend/
 ├── app/
-│   ├── page.tsx               # Landing
-│   ├── report/[session_id]/
-│   │   └── page.tsx           # Report view
-│   └── scenarios/
-│       └── page.tsx           # Demo browser
+│   ├── globals.css          # Tailwind base styles
+│   ├── layout.tsx           # Root layout + metadata
+│   └── page.tsx             # Main dashboard (client component)
 ├── components/
-│   ├── DiffUploader.tsx
-│   ├── ReportSummary.tsx
-│   ├── ChangedSymbols.tsx
-│   ├── CallerGraph.tsx
-│   ├── RiskList.tsx
-│   └── TestRecommendations.tsx
+│   ├── Badges.tsx           # RiskBadge, ConfidenceBadge, PriorityBadge, ChangeChip
+│   ├── ChangedFiles.tsx     # Changed-files table
+│   ├── ChangedSymbols.tsx   # Changed/affected symbols + caller relationships
+│   ├── DiffInput.tsx        # Diff textarea + mode selector + actions
+│   ├── ExportPanel.tsx      # JSON / Markdown download links
+│   ├── ReportSummary.tsx    # Summary stat cards + risk breakdown
+│   ├── ReportView.tsx       # Full report assembly + in-page nav
+│   ├── RiskList.tsx         # Risk cards with evidence
+│   ├── ScenarioPicker.tsx   # Three-scenario selector grid
+│   ├── TestRecommendations.tsx
+│   └── VerificationPanel.tsx  # Verify button + result (demo only)
 └── lib/
-    ├── api.ts                 # Typed fetch wrappers
-    └── types.ts               # Mirror of backend/app/models.py
-```
-
-## Types
-
-Mirror the Pydantic models from `docs/API_CONTRACT.md` into `lib/types.ts`.
-Example:
-
-```typescript
-export type AnalysisMode = "quick" | "standard" | "deep";
-export type Confidence = "confirmed" | "potential" | "unknown";
-export type RiskLevel = "high" | "medium" | "low" | "info";
-
-export interface Report {
-  session_id: string;
-  created_at: string;
-  analysis_mode: AnalysisMode;
-  project_context: ProjectContext;
-  summary: ReportSummary;
-  changed_files: ChangedFile[];
-  changed_symbols: Symbol[];
-  affected_symbols: Symbol[];
-  caller_relationships: CallerRelationship[];
-  risks: Risk[];
-  test_recommendations: TestRecommendation[];
-  verification: VerificationResult | null;
-  limitations: string[];
-  explanations: Record<string, string>;
-  is_demo: boolean;
-  scenario_id: string | null;
-}
+    ├── api.ts               # Typed fetch wrappers for all backend routes
+    └── types.ts             # TypeScript mirrors of backend Pydantic models
 ```
