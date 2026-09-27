@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type { Report, Scenario, AnalysisMode } from "@/lib/types";
-import { postAnalyze, getScenarios, postAnalyzeScenario } from "@/lib/api";
+import { postAnalyze, getScenarios, postAnalyzeScenario, getReport } from "@/lib/api";
 import DiffInput from "@/components/DiffInput";
 import ScenarioPicker from "@/components/ScenarioPicker";
 import ReportView from "@/components/ReportView";
@@ -16,6 +16,24 @@ export default function HomePage() {
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [scenariosError, setScenariosError] = useState<string>("");
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
+
+  // If URL has ?session=<id>, load that report automatically (used by CLI redirect)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get("session");
+    if (sessionId) {
+      setPhase("loading");
+      getReport(sessionId)
+        .then((r) => {
+          setReport(r);
+          setPhase("report");
+        })
+        .catch(() => {
+          setErrorMsg(`Could not load report for session: ${sessionId}`);
+          setPhase("error");
+        });
+    }
+  }, []);
 
   // Load scenarios on mount
   useEffect(() => {

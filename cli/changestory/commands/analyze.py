@@ -12,6 +12,7 @@ repository context is unavailable; limitations are clearly disclosed.
 from __future__ import annotations
 
 import sys
+import webbrowser
 from pathlib import Path
 
 import click
@@ -86,9 +87,10 @@ def _print_report_summary(report: dict, api_url: str, frontend_url: str) -> None
 
     # Report URLs
     base = api_url.rstrip("/")
+    dashboard_url = f"{frontend_url}/?session={session_id}"
     click.echo("-" * 60)
     click.echo(f"  Report URL (API)     : {base}/reports/{session_id}")
-    click.echo(f"  Dashboard URL        : {frontend_url}/?session={session_id}")
+    click.echo(f"  Dashboard URL        : {dashboard_url}")
     click.echo(f"  Export JSON          : {base}/reports/{session_id}/export.json")
     click.echo(f"  Export Markdown      : {base}/reports/{session_id}/export.md")
     click.echo("-" * 60)
@@ -102,6 +104,8 @@ def _print_report_summary(report: dict, api_url: str, frontend_url: str) -> None
             click.echo(f"       - {lim}")
         click.echo()
 
+    return dashboard_url
+
 
 # ---------------------------------------------------------------------------
 # Command
@@ -109,6 +113,13 @@ def _print_report_summary(report: dict, api_url: str, frontend_url: str) -> None
 
 
 @click.command("analyze")
+@click.option(
+    "--open/--no-open",
+    "open_browser",
+    default=True,
+    show_default=True,
+    help="Automatically open the dashboard in the browser after analysis.",
+)
 @click.option(
     "--repo",
     "repo_path",
@@ -157,6 +168,7 @@ def analyze_cmd(
     diff_file: str | None,
     api_url_override: str | None,
     frontend_url: str,
+    open_browser: bool,
 ) -> None:
     """
     Collect Git changes and submit them to the ChangeStory backend.
@@ -257,4 +269,9 @@ def analyze_cmd(
         ) from exc
 
     # ── Print results ──────────────────────────────────────────────────────
-    _print_report_summary(report, api_url=api_url, frontend_url=frontend_url)
+    dashboard_url = _print_report_summary(report, api_url=api_url, frontend_url=frontend_url)
+
+    # ── Open browser ───────────────────────────────────────────────────────
+    if open_browser and dashboard_url:
+        click.echo(f"  Opening dashboard: {dashboard_url}")
+        webbrowser.open(dashboard_url)
